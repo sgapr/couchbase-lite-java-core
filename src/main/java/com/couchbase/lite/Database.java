@@ -5157,6 +5157,11 @@ public final class Database {
             maxDepth = getMaxRevTreeDepth();
         }
 
+        // Do not allow maxDepth of 0 or less.
+        if (maxDepth <= 0) {
+            maxDepth = 1;
+        }
+
         // First find which docs need pruning, and by how much:
 
         Cursor cursor = null;
@@ -5177,7 +5182,7 @@ public final class Database {
                 minGen = Revision.generationFromRevID(minGenRevId);
                 maxGen = Revision.generationFromRevID(maxGenRevId);
                 if ((maxGen - minGen + 1) > maxDepth) {
-                    toPrune.put(docNumericID, (maxGen - minGen));
+                    toPrune.put(docNumericID, (minGen + maxDepth - 1));
                 }
 
             }
