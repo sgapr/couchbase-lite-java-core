@@ -5182,7 +5182,7 @@ public final class Database {
                 minGen = Revision.generationFromRevID(minGenRevId);
                 maxGen = Revision.generationFromRevID(maxGenRevId);
                 if ((maxGen - minGen + 1) > maxDepth) {
-                    toPrune.put(docNumericID, (minGen + maxDepth - 1));
+                    toPrune.put(docNumericID, (maxGen - maxDepth));
                 }
 
             }
