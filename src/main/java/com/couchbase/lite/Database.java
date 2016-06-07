@@ -5148,7 +5148,6 @@ public final class Database {
      */
     @InterfaceAudience.Private
     /* package */ int pruneRevsToMaxDepth(int maxDepth) throws CouchbaseLiteException {
-
         int outPruned = 0;
         boolean shouldCommit = false;
         Map<Long, Integer> toPrune = new HashMap<Long, Integer>();
@@ -5167,20 +5166,16 @@ public final class Database {
         Cursor cursor = null;
         String[] args = { };
 
-        long docNumericID = -1;
-        int minGen = 0;
-        int maxGen = 0;
-
         try {
 
             cursor = database.rawQuery("SELECT doc_id, MIN(revid), MAX(revid) FROM revs GROUP BY doc_id", args);
 
             while(cursor.moveToNext()) {
-                docNumericID = cursor.getLong(0);
+                long docNumericID = cursor.getLong(0);
                 String minGenRevId = cursor.getString(1);
                 String maxGenRevId = cursor.getString(2);
-                minGen = Revision.generationFromRevID(minGenRevId);
-                maxGen = Revision.generationFromRevID(maxGenRevId);
+                int minGen = Revision.generationFromRevID(minGenRevId);
+                int maxGen = Revision.generationFromRevID(maxGenRevId);
                 if ((maxGen - minGen + 1) > maxDepth) {
                     toPrune.put(docNumericID, (maxGen - maxDepth));
                 }
@@ -5193,8 +5188,8 @@ public final class Database {
                 return 0;
             }
 
-            for (Long docNumericIDLong : toPrune.keySet()) {
-                String minIDToKeep = String.format("%d-", toPrune.get(docNumericIDLong).intValue() + 1);
+            for (Long docNumericID : toPrune.keySet()) {
+                String minIDToKeep = String.format("%d-", toPrune.get(docNumericID).intValue() + 1);
                 String[] deleteArgs = { Long.toString(docNumericID), minIDToKeep};
                 int rowsDeleted = database.delete("revs", "doc_id=? AND revid < ? AND current=0", deleteArgs);
                 outPruned += rowsDeleted;
