@@ -814,7 +814,9 @@ public final class Manager {
             String filename = file.getName();
             String name = nameOfDatabaseAtPath(filename);
             String oldDbPath = new File(directory, filename).getAbsolutePath();
-            upgradeDatabase(name, oldDbPath, true);
+            if (!upgradeDatabase(name, oldDbPath, true)) {
+                throw new RuntimeException("Database upgrade failed for: " + name);
+            }
         }
     }
 
@@ -833,14 +835,34 @@ public final class Manager {
                 Log.w(Log.TAG_DATABASE, "Upgrade failed: Creating new db failed");
                 return false;
             }
-            if (!db.exists()) {
-                // Upgrade the old database into the new one:
+            // upgradeDatabase() is called only if dbPath (old db version) exists. So presence of
+            // new version db indicates that previous upgrade crashed midway.
+            if (db.exists()) {
+                Log.v(Log.TAG_DATABASE, "Previous upgrade probably crashed midway. dbPath: " + dbPath);
                 DatabaseUpgrade upgrader = new DatabaseUpgrade(this, db, dbPath);
-                if (!upgrader.importData()) {
-                    upgrader.backOut();
+                upgrader.backOut();
+
+                // We just deleted the DB, so let's create it again.
+                db = getDatabase(name, false);
+                if (db == null) {
+                    Log.w(Log.TAG_DATABASE, "Upgrade failed: Creating new db failed");
                     return false;
                 }
             }
+            if (db.exists()) {
+                // This should not happen as we just deleted the DB.
+                Log.w(Log.TAG_DATABASE, "Upgrade failed: Failed to delete already existing db.");
+                return false;
+            }
+
+            // Upgrade the old database into the new one:
+            DatabaseUpgrade upgrader = new DatabaseUpgrade(this, db, dbPath);
+            if (!upgrader.importData()) {
+                Log.e(Log.TAG_DATABASE, "Upgrade failed: importData failed");
+                upgrader.backOut();
+                return false;
+            }
+
             if (close)
                 db.close();
         }
